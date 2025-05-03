@@ -99,6 +99,37 @@ The service is built using:
    - API Documentation: http://localhost:8081/docs
    - Test Server: http://localhost:9000
 
+## Live Demo
+
+A live demo of this service is hosted on an AWS EC2 instance and is accessible at:
+
+- **Web Service:** [http://13.50.109.88:8081](http://13.50.109.88:8081)
+- **API Documentation:** [http://13.50.109.88:8081/docs](http://13.50.109.88:8081/docs)
+- **Test Server:** [http://13.50.109.88:9000](http://13.50.109.88:9000)
+
+### Using the Live Demo
+
+1. **Create a Webhook Subscription**
+   - Visit [http://13.50.109.88:8081](http://13.50.109.88:8081)
+   - Click on "Create Subscription"
+   - Set the Target URL to `http://13.50.109.88:9000/test` to use the test server
+   - Add event types (e.g., "test_event")
+   - Provide a description (optional)
+   - Submit the form
+
+2. **Trigger a Webhook Event**
+   - Click on "Send Webhook"
+   - Select the event type you subscribed to
+   - Enter a JSON payload (e.g., `{"message": "Hello from webhook!"}`)
+   - Send the event
+
+3. **View Results**
+   - Check "Active Subscriptions" to see your webhook
+   - View "Delivery History" to see delivery status and responses
+   - The test server will display received webhooks at [http://13.50.109.88:9000](http://13.50.109.88:9000)
+
+The demo instance is hosted on AWS EC2 using Docker Compose to orchestrate all the necessary services including PostgreSQL database, Redis cache, Celery workers, and the web application.
+
 ## Sample API Usage
 
 1. **Create Subscription**
