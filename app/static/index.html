@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Service</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tab-button.active {
+            background-color: #4F46E5;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Webhook Service</h1>
+            <p class="text-gray-600">Manage webhook subscriptions and monitor delivery status</p>
+        </header>
+
+        <!-- Tabs -->
+        <div class="mb-8">
+            <div class="flex space-x-4">
+                <button class="tab-button px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300" onclick="showTab('subscriptions')">Subscriptions</button>
+                <button class="tab-button px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300" onclick="showTab('ingest')">Ingest Webhook</button>
+                <button class="tab-button px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300" onclick="showTab('history')">Delivery History</button>
+            </div>
+        </div>
+
+        <!-- Subscriptions Tab -->
+        <div id="subscriptions" class="tab-content active">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Create Subscription</h2>
+                <form id="createSubscriptionForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Target URL</label>
+                        <input type="url" name="target_url" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Secret</label>
+                        <input type="text" name="secret" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Event Types (comma-separated)</label>
+                        <input type="text" name="event_types" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Create Subscription</button>
+                </form>
+
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold mb-4">Active Subscriptions</h2>
+                    <div id="subscriptionsList" class="space-y-4">
+                        <!-- Subscriptions will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ingest Webhook Tab -->
+        <div id="ingest" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Send Webhook</h2>
+                <form id="ingestWebhookForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Subscription ID</label>
+                        <input type="number" name="subscription_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Event Type</label>
+                        <input type="text" name="event_type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Payload (JSON)</label>
+                        <textarea name="payload" rows="4" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                    </div>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Send Webhook</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delivery History Tab -->
+        <div id="history" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">View Delivery History</h2>
+                <form id="viewHistoryForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Subscription ID</label>
+                        <input type="number" name="subscription_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Limit (1-100)</label>
+                        <input type="number" name="limit" value="20" min="1" max="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">View History</button>
+                </form>
+
+                <div class="mt-8">
+                    <div id="deliveryHistory" class="space-y-4">
+                        <!-- Delivery history will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+        }
+
+        // API base URL
+        const API_BASE_URL = window.location.origin;
+
+        // Create Subscription
+        document.getElementById('createSubscriptionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            // Validate secret length
+            if (formData.get('secret').length < 8) {
+                alert('Secret must be at least 8 characters long');
+                return;
+            }
+
+            // Validate event types
+            const eventTypes = formData.get('event_types').split(',').map(type => type.trim());
+            if (eventTypes.length === 0 || eventTypes.some(type => !type)) {
+                alert('Please enter at least one event type');
+                return;
+            }
+
+            const data = {
+                target_url: formData.get('target_url'),
+                secret: formData.get('secret'),
+                event_types: eventTypes
+            };
+
+            try {
+                const response = await axios.post(`${API_BASE_URL}/subscriptions`, data);
+                alert('Subscription created successfully!');
+                e.target.reset(); // Clear the form
+                loadSubscriptions();
+            } catch (error) {
+                const errorMessage = error.response?.data?.detail || 
+                    (Array.isArray(error.response?.data?.detail) ? 
+                        error.response.data.detail.map(d => d.msg).join('\n') : 
+                        error.message);
+                alert(`Error: ${errorMessage}`);
+            }
+        });
+
+        // Load Subscriptions with CRUD operations
+        async function loadSubscriptions() {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/subscriptions`);
+                const subscriptionsList = document.getElementById('subscriptionsList');
+                subscriptionsList.innerHTML = response.data.map(sub => `
+                    <div class="border rounded-lg p-4 mb-4">
+                        <h3 class="font-semibold">Subscription #${sub.id}</h3>
+                        <p>URL: ${sub.target_url}</p>
+                        <p>Events: ${sub.event_types.join(', ')}</p>
+                        <p>Status: ${sub.is_active ? 'Active' : 'Inactive'}</p>
+                        <div class="mt-2 space-x-2">
+                            <button onclick="updateSubscription(${sub.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Edit</button>
+                            <button onclick="deleteSubscription(${sub.id})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button>
+                            <button onclick="toggleSubscription(${sub.id}, ${!sub.is_active})" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                                ${sub.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading subscriptions:', error);
+            }
+        }
+
+        // Update Subscription
+        async function updateSubscription(id) {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/subscriptions/${id}`);
+                const sub = response.data;
+                
+                const newUrl = prompt('Enter new target URL:', sub.target_url);
+                if (!newUrl) return;
+                
+                const newSecret = prompt('Enter new secret:', sub.secret);
+                if (!newSecret) return;
+                
+                const newEvents = prompt('Enter new event types (comma-separated):', sub.event_types.join(','));
+                if (!newEvents) return;
+                
+                await axios.put(`${API_BASE_URL}/subscriptions/${id}`, {
+                    target_url: newUrl,
+                    secret: newSecret,
+                    event_types: newEvents.split(',').map(e => e.trim())
+                });
+                
+                alert('Subscription updated successfully!');
+                loadSubscriptions();
+            } catch (error) {
+                alert(`Error: ${error.response?.data?.detail || error.message}`);
+            }
+        }
+
+        // Delete Subscription
+        async function deleteSubscription(id) {
+            if (!confirm('Are you sure you want to delete this subscription? This will also delete all related webhooks and delivery attempts.')) return;
+            
+            const button = document.querySelector(`button[onclick="deleteSubscription(${id})"]`);
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Deleting...';
+            
+            try {
+                const response = await axios.delete(`${API_BASE_URL}/subscriptions/${id}`);
+                alert('Subscription and all related records deleted successfully!');
+                loadSubscriptions();
+            } catch (error) {
+                const errorMessage = error.response?.data?.detail || 
+                    (Array.isArray(error.response?.data?.detail) ? 
+                        error.response.data.detail.map(d => d.msg).join('\n') : 
+                        error.message);
+                alert(`Error: ${errorMessage}`);
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        // Toggle Subscription Status
+        async function toggleSubscription(id, newStatus) {
+            try {
+                await axios.put(`${API_BASE_URL}/subscriptions/${id}`, {
+                    is_active: newStatus
+                });
+                alert(`Subscription ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+                loadSubscriptions();
+            } catch (error) {
+                alert(`Error: ${error.response?.data?.detail || error.message}`);
+            }
+        }
+
+        // Ingest Webhook
+        document.getElementById('ingestWebhookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                event_type: formData.get('event_type'),
+                payload: JSON.parse(formData.get('payload'))
+            };
+
+            try {
+                const response = await axios.post(
+                    `${API_BASE_URL}/ingest/${formData.get('subscription_id')}`,
+                    data
+                );
+                alert('Webhook sent successfully!');
+            } catch (error) {
+                alert(`Error: ${error.response?.data?.detail || error.message}`);
+            }
+        });
+
+        // View Delivery History
+        document.getElementById('viewHistoryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const subscriptionId = formData.get('subscription_id');
+            const limit = formData.get('limit');
+
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/subscriptions/${subscriptionId}/delivery-attempts?limit=${limit}`
+                );
+                const deliveryHistory = document.getElementById('deliveryHistory');
+                deliveryHistory.innerHTML = response.data.map(attempt => `
+                    <div class="border rounded-lg p-4 ${attempt.is_success ? 'bg-green-50' : 'bg-red-50'}">
+                        <h3 class="font-semibold">Attempt #${attempt.id}</h3>
+                        <p>Status: ${attempt.status_code}</p>
+                        <p>Success: ${attempt.is_success ? 'Yes' : 'No'}</p>
+                        <p>Time: ${new Date(attempt.created_at).toLocaleString()}</p>
+                        ${attempt.error_message ? `<p>Error: ${attempt.error_message}</p>` : ''}
+                        ${attempt.response_body ? `<p>Response: ${attempt.response_body}</p>` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                alert(`Error: ${error.response?.data?.detail || error.message}`);
+            }
+        });
+
+        // Load initial data
+        loadSubscriptions();
+
+        function searchSubscriptions() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const subscriptions = document.querySelectorAll('.subscription-item');
+            const historyDivs = document.querySelectorAll('.history-div');
+            
+            subscriptions.forEach(subscription => {
+                const subscriptionId = subscription.getAttribute('data-subscription-id');
+                const subscriptionText = subscription.textContent.toLowerCase();
+                const isVisible = subscriptionText.includes(searchTerm);
+                subscription.style.display = isVisible ? 'block' : 'none';
+                
+                // Hide/show corresponding history div
+                const historyDiv = document.querySelector(`.history-div[data-subscription-id="${subscriptionId}"]`);
+                if (historyDiv) {
+                    historyDiv.style.display = isVisible ? 'block' : 'none';
+                }
+            });
+        }
+
+        async function deleteSubscription(subscriptionId) {
+            if (!confirm('Are you sure you want to delete this subscription? This will also delete all related webhooks and delivery attempts.')) {
+                return;
+            }
+
+            const deleteButton = document.querySelector(`button[onclick="deleteSubscription(${subscriptionId})"]`);
+            const originalText = deleteButton.textContent;
+            deleteButton.disabled = true;
+            deleteButton.textContent = 'Deleting...';
+
+            try {
+                const response = await fetch(`/subscriptions/${subscriptionId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to delete subscription');
+                }
+
+                // Remove subscription and its history from the DOM
+                const subscriptionElement = document.querySelector(`.subscription-item[data-subscription-id="${subscriptionId}"]`);
+                const historyDiv = document.querySelector(`.history-div[data-subscription-id="${subscriptionId}"]`);
+                
+                if (subscriptionElement) {
+                    subscriptionElement.remove();
+                }
+                if (historyDiv) {
+                    historyDiv.remove();
+                }
+
+                // Update the subscriptions list
+                await fetchSubscriptions();
+            } catch (error) {
+                alert(`Error deleting subscription: ${error.message}`);
+            } finally {
+                deleteButton.disabled = false;
+                deleteButton.textContent = originalText;
+            }
+        }
+
+        async function fetchSubscriptions() {
+            try {
+                const response = await fetch('/subscriptions');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch subscriptions');
+                }
+                const subscriptions = await response.json();
+                
+                const subscriptionsList = document.getElementById('subscriptionsList');
+                const historyContainer = document.getElementById('historyContainer');
+                
+                // Clear existing content
+                subscriptionsList.innerHTML = '';
+                historyContainer.innerHTML = '';
+                
+                // Add each subscription and its history
+                subscriptions.forEach(subscription => {
+                    addSubscriptionToList(subscription);
+                    fetchDeliveryAttempts(subscription.id);
+                });
+            } catch (error) {
+                console.error('Error fetching subscriptions:', error);
+                alert('Failed to fetch subscriptions. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html> 

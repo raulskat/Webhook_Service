@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.local
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.pytest_cache/
+
+# Database
+postgres_data/
+*.sqlite3
+*.db
+pgdata/
+
+# Logs
+*.log
+celerybeat-schedule
+logs/
+worker.log
+beat.log
+web.log
+test_server.log
+
+# Docker
+docker-compose.override.yml
+docker-compose.*.yml
+!.docker-compose.yml
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
