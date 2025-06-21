@@ -13,18 +13,18 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Database configuration
-POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-POSTGRES_DB = os.getenv("POSTGRES_DB", "webhooks")
+import os
 
-# Connection pool configuration
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))
-POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
-POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))
+POSTGRES_USER = os.environ["POSTGRES_USER"]
+POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
+POSTGRES_HOST = os.environ["POSTGRES_HOST"]
+POSTGRES_PORT = os.environ["POSTGRES_PORT"]
+POSTGRES_DB = os.environ["POSTGRES_DB"]
+
+POOL_SIZE = int(os.environ["DB_POOL_SIZE"])
+MAX_OVERFLOW = int(os.environ["DB_MAX_OVERFLOW"])
+POOL_TIMEOUT = int(os.environ["DB_POOL_TIMEOUT"])
+POOL_RECYCLE = int(os.environ["DB_POOL_RECYCLE"])
 
 SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
